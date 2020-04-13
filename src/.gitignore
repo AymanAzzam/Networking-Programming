@@ -6,3 +6,5 @@
 /Server$Group.class
 /Server$AdminHandler.class
 /Server$MemberHandler.class
+/MemberClient.class
+/AdminClient.class
