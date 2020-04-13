@@ -155,7 +155,7 @@ public class Server {
 			
 			// connection-less
 			int port;
-			byte[] sendData = new byte[1024];
+			DatagramPacket sendPacket = null;
 			DatagramSocket clientSocket = null;
 			InetAddress IPAddress = null;
 			
@@ -177,7 +177,6 @@ public class Server {
 			
 			try {	IPAddress = InetAddress.getByName("localhost");	} 
 			catch (UnknownHostException e1) {	e1.printStackTrace();}
-			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 6000); // 6000 is a garbage port
 			
 			while(true) {
 				
@@ -191,7 +190,8 @@ public class Server {
 				
 				if(message.contentEquals("end"))
 					break;
-				
+
+				byte[] sendData = new byte[1024];
 				sendData = message.getBytes();
 				
 				if (groupNumber == 1 || groupNumber == 2) 

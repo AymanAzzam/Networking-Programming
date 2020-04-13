@@ -11,9 +11,6 @@ public class MemberClient {
 	
 	static Integer port;
 	public static final int SUBSCRIBE = 3000;
-	public MemberClient() {
-		// TODO Auto-generated constructor stub
-	}
 	
 	public static void main(String[] args) throws UnknownHostException, IOException {
 		
@@ -41,10 +38,12 @@ public class MemberClient {
 			// connection-less
 			byte[] receiveData = new byte[1024];
 			DatagramSocket clientSocket = new DatagramSocket(port);
-			DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 			
 			//byte[] recieveData = new byte[1024]; // for debugging
 			while (true) {
+				receiveData = new byte[1024];
+				DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
 				clientSocket.receive(receivePacket);
 				receiveData = receivePacket.getData(); // array of bytes
 				consoleOut.println(new String(receiveData));
