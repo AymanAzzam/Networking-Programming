@@ -2,39 +2,41 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 public class Server {
 	
-	
 	public static final int SUBSCRIBE = 3000;
 	public static final int BROADCAST = 3001;
-	
-	static final Group group1 = new Group("1"); 
-	static final Group group2 = new Group("2"); 
+	static ArrayList<Group> groups;
+	static int totalClientsNumber;
 	static final Object NUMBERLOCK = new Object(); 
 	
-	ArrayList<Group> groups;
-	static int totalClientsNumber;
+	public Server() {
+		groups = new ArrayList<Group>();
+		groups.add(new Group("1"));
+		groups.add(new Group("2"));
+		totalClientsNumber = 0;
+	}
 	
 	public static void main(String[] args) throws IOException {
-		// TODO Auto-generated method stub
+		
 		System.out.println("The server started .. ");
 
 		new Thread() {
 			public void run() {
 				try {
-					ServerSocket ss = new ServerSocket(SUBSCRIBE); // either subscribe or publish socket
-					while (true) {
-						// functionality to be done
-						new ClientHandler(ss.accept()).start();
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+					ServerSocket ss = new ServerSocket(SUBSCRIBE);
+					while (true) {	new MemberHandler(ss.accept()).start();	}
+				} 
+				catch (IOException e) {		e.printStackTrace();	}
 			}
 		}.start();
 
@@ -42,33 +44,18 @@ public class Server {
 			public void run() {
 				try {
 					ServerSocket ss = new ServerSocket(BROADCAST);
-					while (true) {
-						new AdminHandler(ss.accept()).start();
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+					while (true) {	new AdminHandler(ss.accept()).start();	}
+				} 
+				catch (IOException e) {		e.printStackTrace();	}
 			}
 		}.start();
-
-	}
-	
-	public Server() {
-		groups = new ArrayList<Group>();
-		totalClientsNumber = 0;
 	}
 
 	public static final class Member {
 		Integer id; 
 		
-		public Member (Integer id){
-			this.id = id;
-		}
-		
-		public int getID () {
-			return this.id;
-		}
+		public Member (Integer id){	this.id = id;	}
+		public int getID () {	return this.id;		}
 	}
 	
 	
@@ -78,160 +65,120 @@ public class Server {
 		ArrayList<Member> members;
 		final int maxNumber = 3;
 		
-		public Group (String name) {
-			this.name = name;
-			members = new ArrayList<Member>();
-			
-		}
+		public Group (String name) {	this.name = name;	members = new ArrayList<Member>();	}
 		
 		
 		public boolean addMember ( Member m) {
-			if (members.size() == maxNumber ) {
-				return false ;
-			}
-			else {
-				members.add(m);
-			}
+			if (members.size() == maxNumber )	return false ;
+			else	members.add(m);
 			return true;
 		}
-		
-		
 	}
 	
-	private static class ClientHandler extends Thread{
+	private static class MemberHandler extends Thread{
 		
 		Socket socket;
 		
-		public ClientHandler(Socket socket) {
-			this.socket = socket;
-			
-		}
+		public MemberHandler(Socket socket) {	this.socket = socket;	}
 		
 		public void run() {
 			PrintWriter out = null;
 			BufferedReader in = null;
-			String message; 
-			try {
-				out = new PrintWriter(this.socket.getOutputStream(), true);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			try {
+			String message = null; 
+			boolean success = false;
+			int id = 0;
+			
+			try {	
+				out = new PrintWriter(this.socket.getOutputStream(), true);	
 				in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			out.println("Welcome, Which group do you want to join (1) Section-1 or (2) Section-2");
+			} 
+			catch (IOException e) {	e.printStackTrace();	}
+			
+			out.println("Welcome, Which group do you want to join? (1) Section-1 or (2) Section-2");
 			
 			try {
 				message = in.readLine();
-				boolean success = false;
-				int id =0;
-				if (message == "1") {
-					
-					synchronized(NUMBERLOCK){	
-						id = 6000+totalClientsNumber++;
-					}
-					
-					Member m = new Member(id);
-					synchronized (group1){
-						
-						success = group1.addMember(m);
-					}
-					
-				}
 				
-				else if (message == "2") {
-					
-					
-					synchronized(NUMBERLOCK){
-						id = 6000+totalClientsNumber++;	
-					}
-					
-					Member m = new Member(id);
-					synchronized (group2){
-						success = group2.addMember(m);
-					}				
-				}
-				if (success) {
-					out.println("You are successfully added to the group Section-"+ message + " with ID =" + id);
-				}
-				else {
-					out.println("Sorry, the group reached its maximum count");
-				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} // reads an integer
-		
-			
+				synchronized(NUMBERLOCK)	{	id = 6000+totalClientsNumber++;	}
+				Member m = new Member(id);
+				
+				if (message == "1")
+					synchronized (groups.get(0))	{	success = groups.get(0).addMember(m);	}
+				else if (message == "2")
+					synchronized (groups.get(1))	{	success = groups.get(1).addMember(m);	}
+				
+				if (success)
+					out.println("You are successfully added to the group Section-"+ message + " with ID = " + id);
+				else	out.println("Sorry, the group reached its maximum count");
+				
+				out.close();	in.close();		socket.close();
+			} 
+			catch (IOException e) {		e.printStackTrace();	}	
 		}
 	} 
 	
 	private static class AdminHandler extends Thread {
 		Socket socket;
 		
-		public AdminHandler(Socket socket) {
-			this.socket = socket;
-			
-		}
+		public AdminHandler(Socket socket) {	this.socket = socket;	}
 		
 		public void run() {
 			PrintWriter out = null;
 			BufferedReader in = null;
 			String message = null; 
-			String groupNumber = null;
-			try {
-				out = new PrintWriter(this.socket.getOutputStream(), true);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			try {
+			int groupNumber = 0;
+			
+			int port;
+			byte[] sendData = new byte[1024];
+			DatagramSocket clientSocket = null;
+			InetAddress IPAddress = null;
+			
+			try {	
+				out = new PrintWriter(this.socket.getOutputStream(), true);	
 				in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			} 
+			catch (IOException e) {	e.printStackTrace();	}
+			
 			out.println("Welcome, Which group do you want to broadcast your message to? (1) Section-1 or (2) Section-2");
-			try {
-				groupNumber = in.readLine();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			
+			try {	groupNumber = Integer.parseInt(in.readLine());	} 
+			catch (IOException e) {		e.printStackTrace();	}
+			
 			out.println("What is the message to be broadcast?");
-			try {
-				message = in.readLine();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
 			
-			if (groupNumber == "1") {
+			try {	clientSocket = new DatagramSocket();	} 
+			catch (SocketException e) {	e.printStackTrace();	}
+			
+			try {	IPAddress = InetAddress.getByName("localhost");	} 
+			catch (UnknownHostException e1) {	e1.printStackTrace();}
+			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 6000);
+			// 6000 is a garbage port
+			
+			while(true)
+			{
+				try {	message = in.readLine();	} 
+				catch (IOException e) {		e.printStackTrace();	}
 				
-			}
-			else if (groupNumber == "2") {
+				if(message == "end")	break;
 				
-			}
-			
-			
-
-			
+				sendData = message.getBytes();
+				
+				if (groupNumber == 1 || groupNumber == 2) 
+					synchronized (groups.get(groupNumber-1))
+					{
+						for(int i=0;i<groups.get(groupNumber-1).members.size();i++)
+						{
+							port = groups.get(groupNumber-1).members.get(i).getID();
+							sendPacket.setPort(port);
+							try {	clientSocket.send(sendPacket);	}
+							catch (IOException e) {	e.printStackTrace();	}	
+						}
+					}
+			}			
+			try {	out.close();	in.close();	socket.close();	clientSocket.close();} 
+			catch (IOException e) {	e.printStackTrace();	}	
 		}
-		
-		
 	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
 	
 }
