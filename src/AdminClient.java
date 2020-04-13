@@ -15,7 +15,7 @@ public class AdminClient {
 
 	public static void main(String[] args) throws UnknownHostException, IOException {
 		// TODO Auto-generated method stub'
-		
+		//connection-oriented
 		Socket s = new Socket("localhost", BROADCAST);
 		BufferedReader consoleIn = new BufferedReader(new InputStreamReader(System.in));
 		BufferedReader serverIn = new BufferedReader(new InputStreamReader(s.getInputStream()));
@@ -24,21 +24,19 @@ public class AdminClient {
 		
 		consoleOut.println(serverIn.readLine()); // group choosing
 		serverOut.println(consoleIn.readLine());
-		consoleOut.println(serverIn.readLine()); // message sending // try this
+		consoleOut.println(serverIn.readLine()); // what message you want to send
 		
 		String msg = null; 
 		while(true) {
 			
 			msg = consoleIn.readLine();
 			serverOut.println(msg);
-			System.out.println(msg.length());
 			if(msg.contentEquals("end")) {
-				System.out.println("admin sent end ");
 				break;
 			} 
 			
 		}
-		System.out.println("admin sent end ");
+		
 		s.close();
 		consoleIn.close();
 		consoleOut.close();

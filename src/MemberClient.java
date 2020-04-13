@@ -25,12 +25,8 @@ public class MemberClient {
 		
 		
 		consoleOut.println(serverIn.readLine());  // which group do you want to join
-		String groupNum = consoleIn.readLine(); // for debugging
-		System.out.println("you entered " + Integer.parseInt(groupNum));
-		serverOut.println(groupNum);
-		consoleOut.println("waiting for server response ..."); // for debugging
+		serverOut.println(consoleIn.readLine());
 		String serverReply = serverIn.readLine(); // success or failure addition to group
-		consoleOut.println(serverReply); // for debugging
 		String str = serverReply.replaceAll("[^\\d]", " "); 
 		str = str.trim(); 
 	    str = str.replaceAll(" +", " "); 
@@ -41,17 +37,17 @@ public class MemberClient {
 		else {
 			consoleOut.println(serverReply);
 			port = Integer.parseInt(str.split("\\s+")[1]);
-			consoleOut.println(port); // for debugging
+			
+			// connection-less
 			byte[] receiveData = new byte[1024];
 			DatagramSocket clientSocket = new DatagramSocket(port);
 			DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 			
-			byte[] recieveData = new byte[1024]; // for debugging
+			//byte[] recieveData = new byte[1024]; // for debugging
 			while (true) {
 				clientSocket.receive(receivePacket);
-				recieveData = receivePacket.getData();
-				System.out.println(recieveData);
-				consoleOut.println(new String(recieveData)); // to be changed
+				receiveData = receivePacket.getData(); // array of bytes
+				consoleOut.println(new String(receiveData));
 			}		
 		}
 		consoleOut.close(); 

@@ -15,19 +15,11 @@ public class Server {
 	
 	public static final int SUBSCRIBE = 3000;
 	public static final int BROADCAST = 3001;
+	
 	static ArrayList<Group> groups;
 	static int totalClientsNumber = 0;
 	static final Object NUMBERLOCK = new Object(); 
 	
-	/*
-	public Server() {
-		groups = new ArrayList<Group>();
-		groups.add(new Group("1"));
-		groups.add(new Group("2"));
-		totalClientsNumber = 0;
-		System.out.println("server constructor is called");
-	}
-	*/
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -43,7 +35,7 @@ public class Server {
 					ServerSocket ss = new ServerSocket(SUBSCRIBE);
 					while (true) {	
 						new MemberHandler(ss.accept()).start();
-						System.out.println("i recieved a Member client");
+						System.out.println("i recieved  Member client");
 					}
 				} 
 				catch (IOException e) {		e.printStackTrace();	}
@@ -81,7 +73,6 @@ public class Server {
 		public Group (String name) {	
 			this.name = name;	
 			members = new ArrayList<Member>();
-			System.out.println("Group constructor is called");
 		}
 		
 		
@@ -98,49 +89,52 @@ public class Server {
 		
 		public MemberHandler(Socket socket) {	
 			this.socket = socket;
-			System.out.println("Connection with Client");
 		}
 		
 		public void run() {
 			
-			PrintWriter out = null;
-			BufferedReader in = null;
+			// connection-oriented
+			PrintWriter socketOut = null;  
+			BufferedReader socketIn = null;
+			
 			int groupNum = 0; 
 			boolean success = false;
+			
 			int id = 0;
 			
 			try {	
-				out = new PrintWriter(this.socket.getOutputStream(), true);	
-				in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+				socketOut = new PrintWriter(this.socket.getOutputStream(), true);	
+				socketIn = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 				
 			} 
 			catch (IOException e) {	e.printStackTrace();	}
 			
-			out.println("Welcome, Which group do you want to join? (1) Section-1 or (2) Section-2");
+			socketOut.println("Welcome, Which group do you want to join? (1) Section-1 or (2) Section-2");
 			
 			try {
-				System.out.println("waiting for group number from client");
-				groupNum = Integer.parseInt(in.readLine());
-				System.out.println("client asked to join group number " + groupNum);
+				
+				groupNum = Integer.parseInt(socketIn.readLine()); // client essentially sends a string 
+				
 				synchronized(NUMBERLOCK){	
 					id = 6000+ (++totalClientsNumber);	
-					System.out.println("total number of clients " + totalClientsNumber);
-					System.out.println("id of client " + id);
+					System.out.println("total number of clients = " + totalClientsNumber);
+					
 				}
 				Member m = new Member(id);
 				
 				synchronized (groups.get(groupNum-1))	{
 					success = groups.get(groupNum-1).addMember(m);	
-					System.out.println("is client added successfully ? " + success);
 				}
 				
-				if (success) {
-					out.println("You are successfully added to the group Section-"+ groupNum + " with ID = " + id);
+				if (success) 
+					socketOut.println("You are successfully added to the group Section-"+ groupNum + " with ID = " + id);
 					
-				}
-				else	out.println("Sorry, the group reached its maximum count");
+				else	
+					socketOut.println("Sorry, the group reached its maximum count");
 				
-				out.close();	in.close();		socket.close();
+				socketOut.close();	
+				socketIn.close();		
+				socket.close();
 			} 
 			catch (IOException e) {		e.printStackTrace();	}	
 		}
@@ -152,69 +146,67 @@ public class Server {
 		public AdminHandler(Socket socket) {	this.socket = socket;	}
 		
 		public void run() {
-			PrintWriter out = null;
-			BufferedReader in = null;
+			// connection-oriented
+			PrintWriter socketOut = null;
+			BufferedReader socketIn = null;
+			
 			String message = null; 
 			int groupNumber = 0;
 			
+			// connection-less
 			int port;
 			byte[] sendData = new byte[1024];
 			DatagramSocket clientSocket = null;
 			InetAddress IPAddress = null;
 			
 			try {	
-				out = new PrintWriter(this.socket.getOutputStream(), true);	
-				in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+				socketOut = new PrintWriter(this.socket.getOutputStream(), true);	
+				socketIn = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 			} 
 			catch (IOException e) {	e.printStackTrace();	}
 			
-			out.println("Welcome, Which group do you want to broadcast your message to? (1) Section-1 or (2) Section-2");
+			socketOut.println("Welcome, Which group do you want to broadcast your message to? (1) Section-1 or (2) Section-2");
 			
-			try {	groupNumber = Integer.parseInt(in.readLine());	} 
+			try {	groupNumber = Integer.parseInt(socketIn.readLine());	} // admin essentially sends a string
 			catch (IOException e) {		e.printStackTrace();	}
 			
-			out.println("What is the message to be broadcast?");
+			socketOut.println("What is the message to be broadcast?");
 			
 			try {	clientSocket = new DatagramSocket();	} 
 			catch (SocketException e) {	e.printStackTrace();	}
 			
 			try {	IPAddress = InetAddress.getByName("localhost");	} 
 			catch (UnknownHostException e1) {	e1.printStackTrace();}
-			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 6000);
-			// 6000 is a garbage port
+			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 6000); // 6000 is a garbage port
 			
 			while(true) {
 				
 				try {	
-					System.out.println("inside server admin part while true ");
-					//in = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));  // for debugging
-					message = in.readLine();
 					
-					//System.out.println(message);
+					message = socketIn.readLine();
 				} 
 				catch (IOException e) {	
 					e.printStackTrace();
 				}
 				
-				if(message == "end")	break;
+				if(message.contentEquals("end"))
+					break;
 				
 				sendData = message.getBytes();
 				
 				if (groupNumber == 1 || groupNumber == 2) 
-					synchronized (groups.get(groupNumber-1))
-					{
-						for(int i=0;i<groups.get(groupNumber-1).members.size();i++)
-						{
+					synchronized (groups.get(groupNumber-1)) {
+						
+						for(int i=0;i<groups.get(groupNumber-1).members.size();i++) {
+							
 							port = groups.get(groupNumber-1).members.get(i).getID();
-							System.out.println("port number is " + port);
-							sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port); // this is right
-							//sendPacket.setPort(port); // not right msh 3rfa leh
+							sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
 							try {	clientSocket.send(sendPacket);	}
 							catch (IOException e) {	e.printStackTrace();	}	
 						}
 					}
 			}			
-			try {	out.close();	in.close();	socket.close();	clientSocket.close();} 
+			try {	socketOut.close();	socketIn.close();	socket.close();	clientSocket.close();} 
 			catch (IOException e) {	e.printStackTrace();	}	
 		}
 	}
