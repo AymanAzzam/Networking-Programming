@@ -84,7 +84,7 @@ public class Server {
 		public void run() {
 			PrintWriter out = null;
 			BufferedReader in = null;
-			String message = null; 
+			int groupNum = 0; 
 			boolean success = false;
 			int id = 0;
 			
@@ -97,15 +97,12 @@ public class Server {
 			out.println("Welcome, Which group do you want to join? (1) Section-1 or (2) Section-2");
 			
 			try {
-				message = in.readLine();
+				groupNum = Integer.parseIntin.readLine());
 				
 				synchronized(NUMBERLOCK)	{	id = 6000+totalClientsNumber++;	}
 				Member m = new Member(id);
 				
-				if (message == "1")
-					synchronized (groups.get(0))	{	success = groups.get(0).addMember(m);	}
-				else if (message == "2")
-					synchronized (groups.get(1))	{	success = groups.get(1).addMember(m);	}
+				synchronized (groups.get(groupNum-1))	{	success = groups.get(groupNum-1).addMember(m);	}
 				
 				if (success)
 					out.println("You are successfully added to the group Section-"+ message + " with ID = " + id);
